@@ -1111,8 +1111,8 @@ void tic_api_textri(tic_mem* tic, s32 x1, s32 y1, s32 x2, s32 y2, s32 x3, s32 y3
     float lu = V0.u, ru = V0.u;
     float lv = V0.v, rv = V0.v;
 
-    float lh = (V1.y - V0.y + 1); // left height ??? +1
-    float rh = (V2.y - V0.y + 1); // right height ??? +1
+    float lh = (V1.y - V0.y); // left height ??? +1
+    float rh = (V2.y - V0.y); // right height ??? +1
 
     float lud = (V1.u - V0.u) / lh; // left U delta
     float lvd = (V1.v - V0.v) / lh; // left V delta
@@ -1120,7 +1120,8 @@ void tic_api_textri(tic_mem* tic, s32 x1, s32 y1, s32 x2, s32 y2, s32 x3, s32 y3
     float rud = (V2.u - V0.u) / rh; // left U delta
     float rvd = (V2.v - V0.v) / rh; // left V delta
 
-    for(s32 y = V0.y; y <= V2.y; y++)
+    // !TODO: check screen bounds here
+    for(s32 y = V0.y; y < V1.y; y++)
     {
         s32 xl = SidesTexBuffer2[y].Left;
         s32 xr = SidesTexBuffer2[y].Right;
@@ -1128,7 +1129,7 @@ void tic_api_textri(tic_mem* tic, s32 x1, s32 y1, s32 x2, s32 y2, s32 x3, s32 y3
         float u = lu;
         float v = lv;
 
-        float width = xr - xl + 1; // ??? +1
+        float width = xr - xl; // ??? +1
 
         float ud = (ru - lu) / width;
         float vd = (rv - lv) / width;
@@ -1141,7 +1142,65 @@ void tic_api_textri(tic_mem* tic, s32 x1, s32 y1, s32 x2, s32 y2, s32 x3, s32 y3
             }
             else
             {
-                u8 color = mapping[getTileSheetPixel(&sheet, round(u), round(v))];
+                u8 color = mapping[getTileSheetPixel(&sheet, (u), (v))]; // ??? round()
+                if (color != TRANSPARENT_COLOR)
+                    setPixel(machine, x, y, color);
+            }
+
+            u += ud;
+            v += vd;
+        }
+
+        lu += lud;
+        lv += lvd;
+
+        ru += rud;
+        rv += rvd;
+    }
+
+    lu = V1.u;//, ru = V0.u;
+    lv = V1.v;//, rv = V0.v;
+
+    lh = (V2.y - V1.y); // left height ??? +1
+    // float rh = (V2.y - V0.y + 1); // right height ??? +1
+
+    lud = (V2.u - V1.u) / lh; // left U delta
+    lvd = (V2.v - V1.v) / lh; // left V delta
+
+    // float rud = (V2.u - V0.u) / rh; // left U delta
+    // float rvd = (V2.v - V0.v) / rh; // left V delta
+
+    if(V1.x > V2.x)
+    {
+        SWAP(lu, ru, float);
+        SWAP(lv, rv, float);
+
+        SWAP(lud, rud, float);
+        SWAP(lvd, rvd, float);
+    }
+
+    for(s32 y = V1.y; y <= V2.y; y++)
+    {
+        s32 xl = SidesTexBuffer2[y].Left;
+        s32 xr = SidesTexBuffer2[y].Right;
+
+        float u = lu;
+        float v = lv;
+
+        float width = xr - xl; // ??? +1
+
+        float ud = (ru - lu) / width;
+        float vd = (rv - lv) / width;
+
+        for(s32 x = xl; x <= xr; x++)
+        {
+            if (use_map)
+            {
+
+            }
+            else
+            {
+                u8 color = mapping[getTileSheetPixel(&sheet, (u), (v))]; // ??? round()
                 if (color != TRANSPARENT_COLOR)
                     setPixel(machine, x, y, color);
             }
