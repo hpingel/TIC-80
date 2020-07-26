@@ -859,6 +859,14 @@ static struct
     float VLeft;
 } SidesTexBuffer[TIC80_HEIGHT];
 
+static struct
+{
+    s32 Left;
+    s32 Right;
+    float ULeft;
+    float VLeft;
+} SidesTexBuffer2[TIC80_HEIGHT];
+
 static void initSidesBuffer()
 {
     for(s32 i = 0; i < COUNT_OF(SidesBuffer); i++)
@@ -999,6 +1007,26 @@ typedef struct
     float x, y, u, v;
 } TexVert;
 
+typedef struct
+{
+    s32 x, y;
+    s32 u, v;
+} TexVert2;
+
+static void triPixelFunc2(tic_mem* memory, s32 x, s32 y, u8 color)
+{
+    if(y >= 0 && y < TIC80_HEIGHT)
+    {
+        if(x < SidesTexBuffer2[y].Left) SidesTexBuffer2[y].Left = x;
+        if(x > SidesTexBuffer2[y].Right) SidesTexBuffer2[y].Right = x;
+    }
+}
+
+static void ticTexLine2(tic_mem* memory, const TexVert2 *v0, const TexVert2 *v1)
+{
+    ticLine(memory, v0->x, v0->y, v1->x, v1->y, 0, triPixelFunc2);
+}
+
 static void ticTexLine(tic_mem* memory, const TexVert *v0, const TexVert *v1)
 {
     const TexVert *top = v0;
@@ -1052,7 +1080,85 @@ static void ticTexLine(tic_mem* memory, const TexVert *v0, const TexVert *v1)
     }
 }
 
-void tic_api_textri(tic_mem* memory, float x1, float y1, float x2, float y2, float x3, float y3, float u1, float v1, float u2, float v2, float u3, float v3, bool use_map, u8* colors, s32 count)
+void tic_api_textri(tic_mem* tic, s32 x1, s32 y1, s32 x2, s32 y2, s32 x3, s32 y3, s32 u1, s32 v1, s32 u2, s32 v2, s32 u3, s32 v3, bool use_map, u8* colors, s32 count)
+{
+    tic_machine* machine = (tic_machine*)tic;
+    u8* mapping = getPalette(tic, colors, count);
+
+    TexVert2 V0 = {.x = x1, .y = y1, .u = u1, .v = v1};
+    TexVert2 V1 = {.x = x2, .y = y2, .u = u2, .v = v2};
+    TexVert2 V2 = {.x = x3, .y = y3, .u = u3, .v = v3};
+
+    if (V0.y > V1.y) SWAP(V0, V1, TexVert2);
+    if (V0.y > V2.y) SWAP(V0, V2, TexVert2);
+    if (V1.y > V2.y) SWAP(V1, V2, TexVert2);
+
+    const u8* map = tic->ram.map.data;
+    tic_tilesheet sheet = getTileSheetFromSegment(tic, tic->ram.vram.blit.segment);
+
+    // !TODO: use current line sides buffers here
+    for(s32 i = 0; i < COUNT_OF(SidesTexBuffer2); i++)
+        SidesTexBuffer2[i].Left = TIC80_WIDTH, SidesTexBuffer2[i].Right = -1;
+
+    ticTexLine2(tic, &V0, &V1);
+    ticTexLine2(tic, &V1, &V2);
+    ticTexLine2(tic, &V2, &V0);
+
+    // tic_api_line(tic, x1, y1, x2, y2, 2);
+    // tic_api_line(tic, x1, y1, x3, y3, 3);
+    // tic_api_line(tic, x3, y3, x2, y2, 4);
+
+    float lu = V0.u, ru = V0.u;
+    float lv = V0.v, rv = V0.v;
+
+    float lh = (V1.y - V0.y + 1); // left height ??? +1
+    float rh = (V2.y - V0.y + 1); // right height ??? +1
+
+    float lud = (V1.u - V0.u) / lh; // left U delta
+    float lvd = (V1.v - V0.v) / lh; // left V delta
+
+    float rud = (V2.u - V0.u) / rh; // left U delta
+    float rvd = (V2.v - V0.v) / rh; // left V delta
+
+    for(s32 y = V0.y; y <= V2.y; y++)
+    {
+        s32 xl = SidesTexBuffer2[y].Left;
+        s32 xr = SidesTexBuffer2[y].Right;
+
+        float u = lu;
+        float v = lv;
+
+        float width = xr - xl + 1; // ??? +1
+
+        float ud = (ru - lu) / width;
+        float vd = (rv - lv) / width;
+
+        for(s32 x = xl; x <= xr; x++)
+        {
+            if (use_map)
+            {
+
+            }
+            else
+            {
+                u8 color = mapping[getTileSheetPixel(&sheet, round(u), round(v))];
+                if (color != TRANSPARENT_COLOR)
+                    setPixel(machine, x, y, color);
+            }
+
+            u += ud;
+            v += vd;
+        }
+
+        lu += lud;
+        lv += lvd;
+
+        ru += rud;
+        rv += rvd;
+    }
+}
+
+static void tic_api_textri2(tic_mem* memory, float x1, float y1, float x2, float y2, float x3, float y3, float u1, float v1, float u2, float v2, float u3, float v3, bool use_map, u8* colors, s32 count)
 {
     tic_machine* machine = (tic_machine*)memory;
     u8* mapping = getPalette(memory, colors, count);
