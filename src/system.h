@@ -98,6 +98,9 @@ typedef struct
 
 } System;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-fpermissive"
+
 typedef struct
 {
     struct
@@ -169,6 +172,8 @@ typedef struct
 
 } StudioConfig;
 
+#pragma GCC diagnostic pop
+
 typedef struct
 {
     tic_mem* tic;
@@ -193,4 +198,3 @@ TIC80_API Studio* studioInit(s32 argc, char **argv, s32 samplerate, const char* 
 #ifdef __cplusplus
 }
 #endif
-

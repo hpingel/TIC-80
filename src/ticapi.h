@@ -139,7 +139,6 @@ TIC_API_LIST(TIC_API_DEF)
 
 struct tic_mem
 {
-    tic_ram             ram;
     tic_cartridge       cart;
 
     char saveid[TIC_SAVEID_SIZE];
@@ -168,6 +167,7 @@ struct tic_mem
     u32 screen[TIC80_FULLWIDTH * TIC80_FULLHEIGHT];
 #endif
     tic80_pixel_color_format screen_format;
+		tic_ram             ram;
 };
 
 tic_mem* tic_core_create(s32 samplerate);

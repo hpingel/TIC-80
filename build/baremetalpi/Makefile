@@ -3,9 +3,13 @@
 #
 TIC80HOME = ../..
 TIC803RD = $(TIC80HOME)/vendor
-CIRCLESTDLIB = $(TIC803RD)/circle-stdlib/
+CIRCLESTDLIB = $(TIC803RD)/circle-stdlib
+
+#include $(CIRCLESTDLIB)/Config.mk
+NEWLIB_ARCH="aarch64-none-circle"
+
 CIRCLEHOME = $(CIRCLESTDLIB)/libs/circle
-NEWLIBDIR = $(CIRCLESTDLIB)/install/arm-none-circle
+NEWLIBDIR = $(CIRCLESTDLIB)/install/$(NEWLIB_ARCH)
 TIC80LIB = $(TIC80HOME)/build/lib
 TIC80SRC = $(TIC80HOME)/src
 BAREMETALSYSTEM = $(TIC80SRC)/system/baremetalpi
@@ -14,11 +18,15 @@ OBJS	= \
 	$(BAREMETALSYSTEM)/main.o $(BAREMETALSYSTEM)/kernel.o $(BAREMETALSYSTEM)/customchargenerator.o \
 	$(BAREMETALSYSTEM)/customscreen.o $(BAREMETALSYSTEM)/utils.o $(BAREMETALSYSTEM)/gamepads.o
 
+
 include $(CIRCLEHOME)/Rules.mk
+
+CXXFLAGS+= -fpermissive
+CFLAGS+= -fpermissive
+CPPFLAGS+= -fpermissive
 
 CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I $(CIRCLESTDLIB)/include -I $(TIC80HOME)/include -I $(TIC80SRC) \
 	  -D BAREMETALPI
-
 
 LIBS :=  \
 	$(TIC80LIB)/libtic80lib.a \
