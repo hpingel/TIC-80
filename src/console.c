@@ -29,7 +29,9 @@
 
 #include <ctype.h>
 #include <string.h>
-
+#if defined(BAREMETALPI)
+#include <alloca.h> 
+#endif
 #if !defined(__TIC_MACOSX__)
 #include <malloc.h>
 #endif
