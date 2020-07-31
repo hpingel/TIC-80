@@ -21,7 +21,7 @@
 #include <circle/serial.h>
 #include <circle/timer.h>
 #include <circle/logger.h>
-#include <circle/usb/dwhcidevice.h>
+#include <circle/usb/usbhcidevice.h>
 #include <SDCard/emmc.h>
 #include <fatfs/ff.h>
 #include <vc4/vchiq/vchiqdevice.h>
@@ -239,7 +239,7 @@ public:
         }
 
 protected:
-        CDWHCIDevice    mDWHCI;
+        CUSBHCIDevice   mDWHCI;
         CEMMCDevice     mEMMC;
         //CFATFileSystem  mFileSystem;
         CConsole        mConsole;
