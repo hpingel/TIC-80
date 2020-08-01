@@ -235,6 +235,10 @@ void inputToTic()
 
 	tic80_input* tic_input = &tic->ram.input;
 
+	bool state[tic_keys_count];
+	memset(&state, 0, sizeof(state));
+	
+		
 	// mouse
 	if (mousebuttons & 0x01) tic_input->mouse.left = true; else tic_input->mouse.left = false;
 	if (mousebuttons & 0x02) tic_input->mouse.right = true; else tic_input->mouse.right = false;
@@ -261,11 +265,14 @@ void inputToTic()
 
 	u32 keynum = 0;
 
+   
+	bool caps = false;
+	bool shift = false;
 	//dbg("MODIF %02x ", keyboardModifiers);
-
-	if(keyboardModifiers & 0x11) tic_input->keyboard.keys[keynum++]= tic_key_ctrl;
-	if(keyboardModifiers & 0x22) tic_input->keyboard.keys[keynum++]= tic_key_shift;
-	if(keyboardModifiers & 0x44) tic_input->keyboard.keys[keynum++]= tic_key_alt;
+	
+	if(keyboardModifiers & 0x11) {tic_input->keyboard.keys[keynum++]= tic_key_ctrl; }
+	if(keyboardModifiers & 0x22) {tic_input->keyboard.keys[keynum++]= tic_key_shift; shift = true;}
+	if(keyboardModifiers & 0x44) {tic_input->keyboard.keys[keynum++]= tic_key_alt;}
 
 	for (unsigned i = 0; i < 6; i++)
 	{
@@ -274,7 +281,13 @@ void inputToTic()
 			// keyboard
 			if(keynum<TIC80_KEY_BUFFER){
 				tic_keycode tkc = TicKeyboardCodes[keyboardRawKeys[i]];
-				if(tkc != tic_key_unknown) tic_input->keyboard.keys[keynum++]= tkc;
+				if(tkc != tic_key_unknown) {
+					if(!state[tkc])
+					{
+						tic_input->keyboard.keys[keynum++]= tkc;
+						state[tkc] = true;
+					}					
+				}
 			}
 			// key to gamepad
 			switch(keyboardRawKeys[i])
@@ -287,9 +300,31 @@ void inputToTic()
 				case 0x4F: tic_input->gamepads.first.right = true; break;
 			}
 			//dbg(" %02x ", keyboardRawKeys[i]);
-
 		}
 	}
+
+  //attempt to fix keyboard problems by importing code inspired from n3ds port
+	static const char Symbols[] =   " abcdefghijklmnopqrstuvwxyz0123456789-=[]\\;'`,./ ";
+	static const char Shift[] =     " ABCDEFGHIJKLMNOPQRSTUVWXYZ)!@#$%^&*(_+{}|:\"~<>? ";
+
+	enum{Count = sizeof Symbols};
+
+	for(s32 i = 0; i < keynum; i++)
+	{
+		tic_key key = tic_input->keyboard.keys[i];
+
+		if(key > 0 && key < Count ) // here we need to call something to prevent key repeat
+		{
+			platform.studio->text = caps
+				? key >= tic_key_a && key <= tic_key_z 
+					? shift ? Symbols[key] : Shift[key]
+					: shift ? Shift[key] : Symbols[key]
+				: shift ? Shift[key] : Symbols[key];
+
+			break;
+		}
+	}
+	
 	//dbg("\n");
 
 
