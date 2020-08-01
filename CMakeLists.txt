@@ -28,6 +28,17 @@ if(Git_FOUND)
     endif()
 endif()
 
+if (BAREMETALPI)
+	#for now, disable stuff that breaks other stuff - this takes time to sort out
+	SET(CMAKE_C_COMPILER_WORKS TRUE CACHE INTERNAL "")
+	SET(CMAKE_CXX_COMPILER_WORKS TRUE CACHE INTERNAL "")
+	SET(CMAKE_C_COMPILER_FORCED TRUE CACHE INTERNAL "")
+	SET(CMAKE_CXX_COMPILER_FORCED TRUE CACHE INTERNAL "")
+	SET(CMAKE_C_COMPILER_ID_RUN TRUE CACHE INTERNAL "")
+	SET(CMAKE_CXX_COMPILER_ID_RUN TRUE CACHE INTERNAL "")
+
+endif()
+
 project(TIC-80 VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION} LANGUAGES C CXX)
 message("Building for target : ${CMAKE_SYSTEM_NAME}")
 
@@ -35,7 +46,7 @@ message("PROJECT_VERSION: ${PROJECT_VERSION}${VERSION_STATUS}")
 
 configure_file("${PROJECT_SOURCE_DIR}/version.h.in" "${CMAKE_CURRENT_BINARY_DIR}/version.h")
 
-if(ANDROID OR EMSCRIPTEN OR N3DS)
+if(ANDROID OR EMSCRIPTEN OR N3DS OR BAREMETALPI)
     set(BUILD_SOKOL_DEFAULT OFF)
     set(BUILD_LIBRETRO_DEFAULT OFF)
     set(BUILD_DEMO_CARTS_DEFAULT OFF)
@@ -63,11 +74,13 @@ endif()
 
 if (BAREMETALPI)
 
+		set(CMAKE_SYSTEM_NAME Generic)
+		set(CMAKE_SYSTEM_PROCESSOR ARM)
+		set(CMAKE_CROSSCOMPILING true)
+	
     set(BUILD_SDL off)
     set(BUILD_DEMO_CARTS OFF)
-
-    set(CMAKE_SYSTEM_NAME Generic)
-    set(CMAKE_SYSTEM_PROCESSOR ARM)
+		set(DISABLE_NETWORKING TRUE)
 
     if(MINGW OR CYGWIN OR WIN32)
         set(UTIL_SEARCH_CMD where)
@@ -75,30 +88,37 @@ if (BAREMETALPI)
         set(UTIL_SEARCH_CMD which)
     endif()
 
-    set(TOOLCHAIN_PREFIX arm-none-eabi-)
+		#workaround to set toolchain prefix from outside - needed for now...
+		#example value: "/tmp/gcc-arm-9.2-2019.12-x86_64-arm-none-eabi/bin/arm-none-eabi-"
+		set(TOOLCHAIN_PREFIX "$ENV{TOOLCHAIN_PREFIX}")		
 
-    execute_process(
-      COMMAND ${UTIL_SEARCH_CMD} ${TOOLCHAIN_PREFIX}gcc
-      OUTPUT_VARIABLE BINUTILS_PATH
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    message("Crosscompiler path is ${BINUTILS_PATH}")
-    get_filename_component(ARM_TOOLCHAIN_DIR ${BINUTILS_PATH} DIRECTORY)
+		execute_process(
+			COMMAND ${UTIL_SEARCH_CMD} ${TOOLCHAIN_PREFIX}gcc
+			OUTPUT_VARIABLE BINUTILS_PATH
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+		message("Crosscompiler path is ${BINUTILS_PATH}")
+		get_filename_component(ARM_TOOLCHAIN_DIR ${BINUTILS_PATH} DIRECTORY)
 
-    # Without that flag CMake is not able to pass test compilation check
-    if (${CMAKE_VERSION} VERSION_EQUAL "3.6.0" OR ${CMAKE_VERSION} VERSION_GREATER "3.6")
-        set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-    else()
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,-E")
-    endif()
+		# Without that flag CMake is not able to pass test compilation check
+		if (${CMAKE_VERSION} VERSION_EQUAL "3.6.0" OR ${CMAKE_VERSION} VERSION_GREATER "3.6")
+				set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+		else()
+				set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,-E")
+		endif()
 
-    # removed squirrel language as it doesn't seem to compile under arm. Needs investigation.
     # Ideally should use the CFLAGS defined in circle build files, not hardwire them here too.
-    # For RPI2
-    #set(CMAKE_C_FLAGS " -DTIC_BUILD_WITH_FENNEL -DTIC_BUILD_WITH_MOON -DTIC_BUILD_WITH_JS -DTIC_BUILD_WITH_WREN -DTIC_BUILD_WITH_LUA -DLUA_32BITS -std=c99 -march=armv7-a+neon-vfpv4  -D AARCH=32 -D __circle__ -D BAREMETALPI  --specs=nosys.specs -O3 -mabi=aapcs -marm  -mfloat-abi=hard -mfpu=neon-vfpv4  -D__DYNAMIC_REENT__")
-    # For RPI3
-    # investigate -funsafe-math-optimizations and -march=armv8-a+crc -mcpu=cortex-a53
-    set(CMAKE_C_FLAGS " -DTIC_BUILD_WITH_FENNEL -DTIC_BUILD_WITH_MOON -DTIC_BUILD_WITH_JS -DTIC_BUILD_WITH_WREN -DTIC_BUILD_WITH_LUA -DLUA_32BITS -std=c99 -march=armv8-a  -D AARCH=32 -mtune=cortex-a53  -D __circle__ -D BAREMETALPI  --specs=nosys.specs -O3 -marm -mfloat-abi=hard -mfpu=neon-fp-armv8 -funsafe-math-optimizations -D__DYNAMIC_REENT__")
+		if ( BAREMETALPI EQUAL 1)
+			set(CMAKE_C_FLAGS " -DTIC_BUILD_WITH_FENNEL -DTIC_BUILD_WITH_MOON -DTIC_BUILD_WITH_JS -DTIC_BUILD_WITH_WREN -DTIC_BUILD_WITH_LUA -DLUA_32BITS -std=c99 -DAARCH=32 -mcpu=arm1176jzf-s -D __circle__ -D BAREMETALPI  --specs=nosys.specs -O3 -marm  -mfloat-abi=hard -mfpu=vfp  -D__DYNAMIC_REENT__")
+		elseif ( BAREMETALPI EQUAL 2)
+			set(CMAKE_C_FLAGS " -DTIC_BUILD_WITH_FENNEL -DTIC_BUILD_WITH_MOON -DTIC_BUILD_WITH_JS -DTIC_BUILD_WITH_WREN -DTIC_BUILD_WITH_LUA -DLUA_32BITS -std=c99 -DAARCH=32 -mcpu=cortex-a7 -D __circle__ -D BAREMETALPI  --specs=nosys.specs -O3 -marm  -mfloat-abi=hard -mfpu=neon-vfpv4  -D__DYNAMIC_REENT__")
+		elseif ( BAREMETALPI EQUAL 3)
+    	set(CMAKE_C_FLAGS " -DTIC_BUILD_WITH_FENNEL -DTIC_BUILD_WITH_MOON -DTIC_BUILD_WITH_JS -DTIC_BUILD_WITH_WREN -DTIC_BUILD_WITH_LUA -DLUA_32BITS -std=c99 -DAARCH=32 -mcpu=cortex-a53  -D __circle__ -D BAREMETALPI  --specs=nosys.specs -O3 -marm -mfloat-abi=hard -mfpu=neon-fp-armv8 -funsafe-math-optimizations -D__DYNAMIC_REENT__")
+		elseif ( BAREMETALPI EQUAL 4)
+			set(CMAKE_C_FLAGS " -DTIC_BUILD_WITH_FENNEL -DTIC_BUILD_WITH_MOON -DTIC_BUILD_WITH_JS -DTIC_BUILD_WITH_WREN -DTIC_BUILD_WITH_LUA -DLUA_32BITS -std=c99  -DAARCH=32 -mcpu=cortex-a72  -D __circle__ -D BAREMETALPI  --specs=nosys.specs -O3 -marm -mfloat-abi=hard -mfpu=neon-fp-armv8 -funsafe-math-optimizations -D__DYNAMIC_REENT__")
+		else()
+  		message("Raspberry Pi Model is unknown.")
+		endif()
 
     set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}gcc)
     set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
