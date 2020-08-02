@@ -49,7 +49,7 @@ static	CScreenDevice      mScreen(TIC80_WIDTH, TIC80_HEIGHT);
 static        CSerialDevice      mSerial(&mInterrupt);
 static        CTimer             mTimer(&mInterrupt);
 static        CLogger		mLogger(LogWarning /*mOptions.GetLogLevel ()*/, &mTimer);
-static        CUSBHCIDevice	mDWHCI (&mInterrupt, &mTimer);
+static        CUSBHCIDevice	mUSBHCI (&mInterrupt, &mTimer);
 static        CEMMCDevice     mEMMC(&mInterrupt, &mTimer, &mActLED);
 static        CConsole        mConsole(&mScreen);
 static	FATFS		mFileSystem;
@@ -125,7 +125,7 @@ boolean initializeCore()
                         return false;
                 }*/
 
-	if (!mDWHCI.Initialize ())
+	if (!mUSBHCI.Initialize ())
 	{
 		return false;
         }

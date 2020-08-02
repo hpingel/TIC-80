@@ -167,7 +167,7 @@ public:
                          const char *pPartitionName = CSTDLIBAPP_DEFAULT_PARTITION)
                 : CStdlibAppScreen (kernel),
                   mpPartitionName (pPartitionName),
-                  mDWHCI (&mInterrupt, &mTimer),
+                  mUSBHCI (&mInterrupt, &mTimer),
                   mEMMC (&mInterrupt, &mTimer, &mActLED),
                   mConsole (&mScreen),
 		  mVCHIQ (&mMemory, &mInterrupt),
@@ -207,7 +207,7 @@ public:
                         return false;
                 }*/
 
-                if (!mDWHCI.Initialize ())
+                if (!mUSBHCI.Initialize ())
                 {
                         return false;
                 }
@@ -239,7 +239,7 @@ public:
         }
 
 protected:
-        CUSBHCIDevice   mDWHCI;
+        CUSBHCIDevice   mUSBHCI;
         CEMMCDevice     mEMMC;
         //CFATFileSystem  mFileSystem;
         CConsole        mConsole;
