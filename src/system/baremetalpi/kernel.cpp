@@ -40,6 +40,9 @@ static const char* KN = "TIC80"; // kernel name
 // currently pressed keys and modifiers
 static unsigned char keyboardRawKeys[6];
 static char keyboardModifiers;
+static char lastKeyPressed;
+static const unsigned keyPressRepeatLockLimit = 15;
+static unsigned keyPressRepeatLock = keyPressRepeatLockLimit;
 
 // mouse status
 static unsigned mousex;
@@ -69,6 +72,30 @@ static struct
 	char* clipboard;
 
 } platform;
+
+
+bool preventKeyRepeat ( char newKey )
+{
+	bool res = false;
+	if (lastKeyPressed == newKey)
+	{
+		if (keyPressRepeatLock > 0)
+		{
+			res = true;
+		}
+		else
+		{
+			//after time passed allow same key again
+			keyPressRepeatLock = keyPressRepeatLockLimit;
+		}
+	}
+	else
+	{
+		lastKeyPressed = newKey;
+		keyPressRepeatLock = keyPressRepeatLockLimit;
+	}
+	return res;
+}
 
 static void setClipboardText(const char* text)
 {
@@ -309,19 +336,26 @@ void inputToTic()
 
 	enum{Count = sizeof Symbols};
 
+	if (keyPressRepeatLock > 0)
+		keyPressRepeatLock--;
+
 	for(s32 i = 0; i < keynum; i++)
 	{
 		tic_key key = tic_input->keyboard.keys[i];
 
 		if(key > 0 && key < Count ) // here we need to call something to prevent key repeat
 		{
-			platform.studio->text = caps
+			char newKey = caps
 				? key >= tic_key_a && key <= tic_key_z 
 					? shift ? Symbols[key] : Shift[key]
 					: shift ? Shift[key] : Symbols[key]
 				: shift ? Shift[key] : Symbols[key];
-
-			break;
+				
+			if (!preventKeyRepeat( newKey ))
+			{
+				platform.studio->text = newKey;
+				break;
+			}
 		}
 	}
 	
